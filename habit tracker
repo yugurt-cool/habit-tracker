@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Simple Habit Tracker</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    max-width: 500px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+    background: #f4f7f6;
+    color: #333;
+  }
+  h1 {
+    text-align: center;
+  }
+  #new-habit-form {
+    display: flex;
+    margin-bottom: 1rem;
+  }
+  #new-habit {
+    flex: 1;
+    padding: 0.5rem;
+    font-size: 1rem;
+  }
+  button {
+    padding: 0.5rem 1rem;
+    margin-left: 0.5rem;
+    background: #4caf50;
+    color: white;
+    border: none;
+    cursor: pointer;
+  }
+  button:hover {
+    background: #45a049;
+  }
+  ul#habit-list {
+    list-style: none;
+    padding: 0;
+  }
+  ul#habit-list li {
+    background: white;
+    margin-bottom: 0.5rem;
+    padding: 0.75rem;
+    border-radius: 5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .habit-name {
+    flex: 1;
+  }
+  input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+  }
+  .streak {
+    font-size: 0.85rem;
+    color: #888;
+    margin-left: 1rem;
+  }
+  #clear-btn {
+    margin-top: 1rem;
+    background: #f44336;
+  }
+  #clear-btn:hover {
+    background: #e53935;
+  }
+</style>
+</head>
+<body>
+
+<h1>Simple Habit Tracker</h1>
+
+<form id="new-habit-form">
+  <input type="text" id="new-habit" placeholder="Add new habit..." required />
+  <button type="submit">Add</button>
+</form>
+
+<ul id="habit-list"></ul>
+
+<button id="clear-btn">Clear All Habits</button>
+
+<script>
+  const habitForm = document.getElementById('new-habit-form');
+  const habitInput = document.getElementById('new-habit');
+  const habitList = document.getElementById('habit-list');
+  const clearBtn = document.getElementById('clear-btn');
+
+  // Load habits from localStorage or start empty
+  let habits = JSON.parse(localStorage.getItem('habits')) || [];
+
+  // Helper: Get today's date as YYYY-MM-DD
+  function today() {
+    return new Date().toISOString().split('T')[0];
+  }
+
+  // Save habits to localStorage
+  function saveHabits() {
+    localStorage.setItem('habits', JSON.stringify(habits));
+  }
+
+  // Calculate streak for a habit (consecutive days completed)
+  function calculateStreak(dates) {
+    if (!dates.length) return 0;
+    let streak = 1;
+    for (let i = dates.length - 1; i > 0; i--) {
+      const current = new Date(dates[i]);
+      const prev = new Date(dates[i - 1]);
+      const diff = (current - prev) / (1000 * 60 * 60 * 24);
+      if (diff === 1) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+    return streak;
+  }
+
+  // Render habits list
+  function renderHabits() {
+    habitList.innerHTML = '';
+
+    habits.forEach((habit, index) => {
+      const li = document.createElement('li');
+
+      const label = document.createElement('label');
+      label.classList.add('habit-name');
+
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+
+      // Check if habit is completed today
+      checkbox.checked = habit.dates.includes(today());
+
+      checkbox.addEventListener('change', () => {
+        if (checkbox.checked) {
+          if (!habit.dates.includes(today())) {
+            habit.dates.push(today());
+            habit.dates.sort();
+          }
+        } else {
+          habit.dates = habit.dates.filter(date => date !== today());
+        }
+        saveHabits();
+        renderHabits();
+      });
+
+      label.appendChild(checkbox);
+      label.appendChild(document.createTextNode(' ' + habit.name));
+
+      const streakSpan = document.createElement('span');
+      streakSpan.classList.add('streak');
+      streakSpan.textContent = `🔥 Streak: ${calculateStreak(habit.dates)}`;
+
+      li.appendChild(label);
+      li.appendChild(streakSpan);
+
+      habitList.appendChild(li);
+    });
+  }
+
+  // Add new habit
+  habitForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const newHabit = habitInput.value.trim();
+    if (newHabit && !habits.some(h => h.name.toLowerCase() === newHabit.toLowerCase())) {
+      habits.push({ name: newHabit, dates: [] });
+      saveHabits();
+      renderHabits();
+      habitInput.value = '';
+    } else {
+      alert('Habit already exists or is invalid!');
+    }
+  });
+
+  // Clear all habits
+  clearBtn.addEventListener('click', () => {
+    if (confirm('Clear all habits and progress?')) {
+      habits = [];
+      saveHabits();
+      renderHabits();
+    }
+  });
+
+  // Initial render
+  renderHabits();
+</script>
+
+</body>
+</html>
